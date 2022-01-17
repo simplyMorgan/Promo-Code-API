@@ -14,7 +14,6 @@ class PromoCodeController extends Controller
     protected $status = false;
     protected $message = null;
     protected $data = null;
-    protected $apiKey = 'AIzaSyAa0nnFnQDKdFoGVJcddEfHHByBuBUz9TI';
 
     use ApiTrait;
 
@@ -180,15 +179,13 @@ class PromoCodeController extends Controller
     {
         try {
             $rules = [
-                'origin' => 'required|string',
-                'destination' => 'required|string',
+                'origin' => 'required|array:lat,lng',
+                'destination' => 'required|array:lat,lng',
                 'promo_code' => 'required|alpha_num|max:8'
             ];
             $customMessages = [
-                'origin.required' => 'Origin address is required',
-                'origin.string' => 'Origin address is invalid',
-                'destination.required' => 'Destination address is required',
-                'destination.string' => 'Destination address is invalid',
+                'origin.required' => 'Origin coordinates is required',
+                'destination.required' => 'Destination coordinates is required',
                 'promo_code.required' => 'Promo code is required',
                 'promo_code.alpha_num' => 'Promo code is not valid',
                 'promo_code.max' => 'Promo code is incorrect',
@@ -201,9 +198,9 @@ class PromoCodeController extends Controller
                     $promo_code = $this->getPromoCodeData($passed_data['promo_code']);
                     $event_venue = $this->getEventVenue($promo_code->event_id);
         
-                    $origin = $this->getCoordinates($passed_data['origin']);
-                    $destination = $this->getCoordinates($passed_data['destination']);
-                    $event = $this->getCoordinates($event_venue);
+                    $origin = (object) $passed_data['origin'];
+                    $destination = (object) $passed_data['destination'];
+                    $event = (object) $event_venue;
         
                     $distanceFromOrigin      = $this->getDistance($origin, $event);
                     $distanceFromDestination = $this->getDistance($destination, $event);
@@ -240,7 +237,7 @@ class PromoCodeController extends Controller
 
     protected function promoCodeIsActive($code)
     {
-        $promocode = PromoCode::where('promo_code', $code)->findOrFail();
+        $promocode = PromoCode::where('promo_code', $code)->get();
         if($promocode->first()->status == 'Active') 
             return true;
         
@@ -288,8 +285,10 @@ class PromoCodeController extends Controller
     protected function getCoordinates($address)
     {
         $address = ucwords(strtolower($address));
+        $address = str_replace(',', ' ', $address);
         $formattedAddress = str_replace(' ', '+', $address);
-        $geocode = file_get_contents('https://maps.googleapis.com/maps/api/geocode/json?address='.$formattedAddress.'&sensor=false&key='.$this->apiKey);
+        $apiKey = '';
+        $geocode = file_get_contents('https://maps.googleapis.com/maps/api/geocode/json?address='.$formattedAddress.'&sensor=false&key='.$apiKey);
         $output = json_decode($geocode);
         if(!empty($output->error_message)) {
             return $this->apiResonse($this->data, $output->error_message, $this->status);
@@ -320,13 +319,13 @@ class PromoCodeController extends Controller
 
     protected function getPromoCodeData($promo_code)
     {
-        $data = PromoCode::where('promo_code', $promo_code)->findOrFail();
+        $data = PromoCode::where('promo_code', $promo_code)->get()->first();
         return $data;
     }
 
     protected function getEventVenue($event_id)
     {
-        return 'SafeBoda Nigeria, Oluyole Way, 200285, Ibadan';      // set a temporary event location for all promo codes regardless of their event id
+        return '7.4189195393176135, 3.9136517575203715';      // set a temporary event location for all promo codes regardless of their event id
     }
 
     protected function drawPolyline($origin, $destination)

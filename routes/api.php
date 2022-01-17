@@ -19,16 +19,18 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-Route::middleware('auth:api')->get('/user', function (Request $request) {
-    return $request->user();
-});
-
 Route::group(['prefix' => 'promo-code'], function(){
-    Route::get('/', [PromoCodeController::class, 'index'])->name('fetch.all.promo.codes');
-    Route::get('/show-active', [PromoCodeController::class, 'showActivePromoCodes'])->name('fetch.active.promo.codes');
 
-    Route::post('/deactivate/{code}', [PromoCodeController::class, 'deactivatePromoCode'])->name('deactivate.promo.code');
+    Route::group(['prefix' => 'private', 'middleware' => 'auth:api'], function(){
 
-    Route::post('/generate', [PromoCodeController::class, 'create'])->name('generate.promo.code');
+        Route::get('/', [PromoCodeController::class, 'index'])->name('fetch.all.promo.codes');
+        Route::get('/show-active', [PromoCodeController::class, 'showActivePromoCodes'])->name('fetch.active.promo.codes');
+    
+        Route::put('/deactivate/{code}', [PromoCodeController::class, 'deactivatePromoCode'])->name('deactivate.promo.code');
+        Route::post('/generate', [PromoCodeController::class, 'create'])->name('generate.promo.code');
+    });
+
     Route::post('/check-validity', [PromoCodeController::class, 'checkPromoCodeValidity'])->name('check.promo.code.validity');
+
 });
+
